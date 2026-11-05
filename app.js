@@ -29,6 +29,7 @@ const attendeePairs = [
 ];
 const ATTENDEES = attendeePairs.flatMap(group => group.people);
 const TOTAL_ATTENDEES = ATTENDEES.length;
+const SERVICE_PER_PERSON = 3.5;
 
 const state = { name:'', choices:{share:[],first:null,main:null,dessert:null}, people:[] };
 
@@ -175,10 +176,14 @@ function summaryRows(cat,showVoteTotal=false){
     return `<div class="summary-row"><div><strong>${name}</strong>${showVoteTotal?`<small>${count} ${count===1?'voto':'votos'} × ${fmt(price)} = ${fmt(voteTotal)}</small>`:''}</div><div class="right">${count} ${count===1?'persona':'personas'}<small>${showVoteTotal?fmt(voteTotal):fmt(price)}</small></div></div>`
   }).join('');
 }
-function personTotal(p){
+function foodTotal(p){
   if(!p) return 0;
   const shareName=(p.share||[])[0] || null;
   return priceOf('share',shareName)+priceOf('first',p.first)+priceOf('main',p.main)+priceOf('dessert',p.dessert);
+}
+function personTotal(p){
+  if(!p) return 0;
+  return foodTotal(p) + (hasResponded(p) ? SERVICE_PER_PERSON : 0);
 }
 function groupTotal(){
   const people=ATTENDEES.map(personByName).filter(Boolean);
@@ -187,7 +192,7 @@ function groupTotal(){
 function personCard(name){
   const p=personByName(name);
   if(!hasResponded(p)) return `<div class="person-card pending"><div class="person-top"><span class="person-name">${name}</span><span class="pending-pill">Pendiente</span></div><div class="person-lines">Aún no ha hecho su selección.</div></div>`;
-  return `<div class="person-card"><div class="person-top"><span class="person-name">${name}</span><span class="person-total">${fmt(personTotal(p))}</span></div><div class="person-lines">🥘 ${(p.share||[]).length?(p.share||[]).join(' · '):'—'}<br>🍲 ${p.first||'—'}<br>🥩 ${p.main||'—'}<br>🍰 ${p.dessert||'—'}</div></div>`;
+  return `<div class="person-card"><div class="person-top"><span class="person-name">${name}</span><span class="person-total">${fmt(personTotal(p))}</span></div><div class="person-lines">🥘 ${(p.share||[]).length?(p.share||[]).join(' · '):'—'}<br>🍲 ${p.first||'—'}<br>🥩 ${p.main||'—'}<br>🍰 ${p.dessert||'—'}<br>🥖 Pan / servicio · ${fmt(SERVICE_PER_PERSON)}</div></div>`;
 }
 function renderSummary(){
   const responded=ATTENDEES.filter(name=>hasResponded(personByName(name))).length;
@@ -198,6 +203,8 @@ function renderSummary(){
   $('#mainStat').textContent=knownPeople.filter(p=>isRealFirst(p.first) || isRealMain(p.main)).length;
   $('#groupTotalStat').textContent=fmt(total);
   $('#averageStat').textContent=fmt(average);
+  const serviceTotal=responded*SERVICE_PER_PERSON;
+  $('#serviceSummary').innerHTML=responded ? `<div class="summary-row"><div><strong>Pan / servicio</strong><small>${responded} ${responded===1?'persona':'personas'} × ${fmt(SERVICE_PER_PERSON)}</small></div><div class="right"><strong>${fmt(serviceTotal)}</strong><small>incluido en TOTAL</small></div></div>` : '<div class="empty">Se añadirá cuando alguien haya respondido.</div>';
   $('#shareSummary').innerHTML=summaryRows('share',true); $('#firstSummary').innerHTML=summaryRows('first'); $('#mainSummary').innerHTML=summaryRows('main'); $('#dessertSummary').innerHTML=summaryRows('dessert');
   $('#peopleSummary').innerHTML=attendeePairs.map(group=>`<div class="pair-summary"><div class="pair-summary-title">${group.label}</div><div class="pair-summary-people">${group.people.map(personCard).join('')}</div></div>`).join('');
 }

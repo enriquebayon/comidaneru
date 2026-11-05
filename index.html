@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1f4f3a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Comida Ñeru · Sábado 7/11</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero-badge">🍽️ EL ÑERU</div>
+      <h1>Comida Ñeru<br><span>Sábado 7/11</span></h1>
+      <p>Elegimos juntos, vemos qué apetece más y dejamos la comanda preparada.</p>
+      <div id="modePill" class="mode-pill">Modo demo local</div>
+    </header>
+
+    <main>
+      <section id="loginView" class="card login-card">
+        <div class="eyebrow">LOS 13 DE LA COMIDA</div>
+        <h2>¿Quién eres?</h2>
+        <p class="muted">Toca tu nombre. Las parejas aparecen juntas y verás quién ya ha respondido.</p>
+        <div id="attendeeGroups" class="attendee-groups"></div>
+        <div class="attendance-progress">
+          <div class="attendance-progress-top">
+            <span>Elecciones recibidas</span>
+            <strong id="loginProgressText">0 de 13</strong>
+          </div>
+          <div class="progress-track"><div id="loginProgressBar" class="progress-bar"></div></div>
+        </div>
+        <p class="tiny">No hace falta registro ni contraseña.</p>
+      </section>
+
+      <section id="menuView" class="hidden">
+        <div class="sticky-userbar">
+          <div>
+            <span class="tiny-label">ESTÁS ELIGIENDO COMO</span>
+            <strong id="currentUserName">—</strong>
+          </div>
+          <button id="changeUserBtn" class="ghost small">Cambiar</button>
+        </div>
+
+        <nav class="tabs" aria-label="Secciones de la carta">
+          <button class="tab active" data-tab="share">🥘<span>Compartir</span></button>
+          <button class="tab" data-tab="first">🍲<span>Primeros</span></button>
+          <button class="tab" data-tab="main">🥩<span>Principal</span></button>
+          <button class="tab" data-tab="dessert">🍰<span>Postre</span></button>
+          <button class="tab" data-tab="summary">👥<span>Resumen</span></button>
+        </nav>
+
+        <section id="sharePanel" class="panel active">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">PARA COMPARTIR</div>
+              <h2>¿A qué te apuntas?</h2>
+            </div>
+            <div class="counter" id="shareCount">0</div>
+          </div>
+          <p class="muted">Marca todos los entrantes que te apetezcan. Veremos cuántas personas quieren cada uno.</p>
+          <div id="shareList" class="dish-list"></div>
+        </section>
+
+        <section id="firstPanel" class="panel">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">PRIMER PLATO</div>
+              <h2>Elige uno (o ninguno)</h2>
+            </div>
+          </div>
+          <p class="muted">Especialidades, verduras y sopas de la carta.</p>
+          <div id="firstList" class="dish-list"></div>
+        </section>
+
+        <section id="mainPanel" class="panel">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">PLATO PRINCIPAL</div>
+              <h2>Carne o pescado</h2>
+            </div>
+          </div>
+          <div id="mainList" class="dish-list"></div>
+        </section>
+
+        <section id="dessertPanel" class="panel">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">POSTRE</div>
+              <h2>Elige uno (o ninguno)</h2>
+            </div>
+          </div>
+          <div id="dessertList" class="dish-list"></div>
+        </section>
+
+        <section id="summaryPanel" class="panel">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">RESUMEN DEL GRUPO</div>
+              <h2>Así va la comida</h2>
+            </div>
+            <button id="refreshBtn" class="ghost small">Actualizar</button>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat"><span>Han respondido</span><strong id="participantsStat">0/13</strong></div>
+            <div class="stat"><span>Han elegido principal</span><strong id="mainStat">0</strong></div>
+            <div class="stat"><span>Total individual*</span><strong id="individualTotalStat">0 €</strong></div>
+          </div>
+          <p class="tiny">* Suma primeros + principales + postres. Los entrantes compartidos se muestran aparte.</p>
+
+          <div class="summary-block">
+            <h3>🔥 Entrantes más votados</h3>
+            <div id="shareSummary"></div>
+          </div>
+
+          <div class="summary-block">
+            <h3>🍲 Primeros</h3>
+            <div id="firstSummary"></div>
+          </div>
+
+          <div class="summary-block">
+            <h3>🥩 Principales</h3>
+            <div id="mainSummary"></div>
+          </div>
+
+          <div class="summary-block">
+            <h3>🍰 Postres</h3>
+            <div id="dessertSummary"></div>
+          </div>
+
+          <div class="summary-block">
+            <h3>👥 Por persona</h3>
+            <div id="peopleSummary" class="people-grid"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer>
+      <p>Precios cargados desde la carta de El Ñeru · Madrid.</p>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

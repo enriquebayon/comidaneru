@@ -34,12 +34,14 @@ const state = { name:'', choices:{share:[],first:null,main:null,dessert:null}, p
 
 function isRealFirst(value){ return Boolean(value && value !== 'Sin primero'); }
 function isRealMain(value){ return Boolean(value && value !== 'Sin principal'); }
+function isFabada(value){ return value === 'Fabada Asturiana'; }
 function normalizePerson(p){
   if(!p) return p;
   const share = Array.isArray(p.share) ? p.share.filter(Boolean).slice(0,1) : [];
   let first = p.first ?? null;
   let main = p.main ?? null;
-  if(isRealFirst(first) && isRealMain(main)) main = null;
+  // Excepcion: Fabada Asturiana puede combinarse con 1 principal.
+  if(isRealFirst(first) && !isFabada(first) && isRealMain(main)) main = null;
   return {...p, share, first, main, dessert:p.dessert ?? null};
 }
 const $ = s => document.querySelector(s);
@@ -106,7 +108,8 @@ function renderAttendeeSelector(){
 function dishCard(cat,name,price){
   const selected=cat==='share'?state.choices.share.includes(name):state.choices[cat]===name;
   const votes=cat==='share'?state.people.filter(p=>(p.share||[]).includes(name)).length:null;
-  const blocked=(cat==='first' && isRealMain(state.choices.main)) || (cat==='main' && isRealFirst(state.choices.first));
+  const blocked=(cat==='first' && isRealMain(state.choices.main) && isRealFirst(name) && !isFabada(name)) ||
+    (cat==='main' && isRealFirst(state.choices.first) && !isFabada(state.choices.first));
   return `<button class="dish ${selected?'selected':''} ${blocked?'blocked':''}" data-cat="${cat}" data-name="${encodeURIComponent(name)}" aria-disabled="${blocked?'true':'false'}">
     <div class="dish-main"><div class="dish-name">${name}</div><div class="dish-meta"><span class="price">${fmt(price)}</span>${cat==='share'?`<span class="votes">${votes} ${votes===1?'voto':'votos'}</span>`:''}${blocked?'<span class="lock-badge">🔒 Bloqueado</span>':''}</div></div>
     <div class="select-dot">${selected?'✓':''}</div></button>`;
@@ -116,24 +119,37 @@ function renderLists(){
   $('#shareCount').textContent=`${state.choices.share.length}/1`;
 
   const firstBlocked=isRealMain(state.choices.main);
-  const mainBlocked=isRealFirst(state.choices.first);
+  const mainBlocked=isRealFirst(state.choices.first) && !isFabada(state.choices.first);
   const firstHelp=$('#firstHelp');
   const mainHelp=$('#mainHelp');
   if(firstHelp){
-    firstHelp.textContent=firstBlocked?`🔒 Ya has elegido “${state.choices.main}” como principal. Desmárcalo para poder elegir un primero.`:'Elige un primero solo si NO vas a elegir principal. Puedes dejarlo sin seleccionar.';
-    firstHelp.classList.toggle('locked-copy',firstBlocked);
+    if(firstBlocked){
+      firstHelp.textContent=`🥣 Ya has elegido “${state.choices.main}”. Si quieres, todavía puedes añadir Fabada Asturiana; el resto de primeros están bloqueados.`;
+      firstHelp.classList.add('locked-copy');
+    } else {
+      firstHelp.textContent='Elige un primero O un principal. Excepción: la Fabada Asturiana sí puede combinarse con 1 principal.';
+      firstHelp.classList.remove('locked-copy');
+    }
   }
   if(mainHelp){
-    mainHelp.textContent=mainBlocked?`🔒 Ya has elegido “${state.choices.first}” como primero. Desmárcalo para poder elegir un principal.`:'Elige un principal solo si NO has elegido primero. Carne o pescado.';
-    mainHelp.classList.toggle('locked-copy',mainBlocked);
+    if(isFabada(state.choices.first)){
+      mainHelp.textContent='✅ Has elegido Fabada Asturiana. Puedes elegir también 1 principal.';
+      mainHelp.classList.remove('locked-copy');
+    } else if(mainBlocked){
+      mainHelp.textContent=`🔒 Ya has elegido “${state.choices.first}” como primero. Desmárcalo para poder elegir un principal.`;
+      mainHelp.classList.add('locked-copy');
+    } else {
+      mainHelp.textContent='Elige un principal solo si NO has elegido otro primero. Excepción: con Fabada Asturiana sí puedes elegir principal.';
+      mainHelp.classList.remove('locked-copy');
+    }
   }
 
   document.querySelectorAll('.dish').forEach(btn=>btn.onclick=async()=>{
     const cat=btn.dataset.cat, name=decodeURIComponent(btn.dataset.name);
-    if(cat==='first' && isRealMain(state.choices.main)){
-      toast(`Ya has elegido principal: ${state.choices.main}`); return;
+    if(cat==='first' && isRealMain(state.choices.main) && isRealFirst(name) && !isFabada(name)){
+      toast('Con principal solo puedes añadir Fabada Asturiana'); return;
     }
-    if(cat==='main' && isRealFirst(state.choices.first)){
+    if(cat==='main' && isRealFirst(state.choices.first) && !isFabada(state.choices.first)){
       toast(`Ya has elegido primero: ${state.choices.first}`); return;
     }
     if(cat==='share') state.choices.share=state.choices.share.includes(name)?[]:[name];

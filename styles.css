@@ -60,3 +60,5 @@ footer{text-align:center;padding:10px 20px calc(26px + env(safe-area-inset-botto
 
 .stat-total strong,.stat-average strong{color:var(--green)}
 @media(max-width:640px){.stats-grid{grid-template-columns:repeat(2,1fr)}.stat strong{font-size:19px}}
+
+.fabada-note{margin:0 0 10px;padding:11px 12px;border-radius:14px;background:#fff5dc;border:1px solid #efd29a;color:#654515;font-size:13px;line-height:1.35}.fabada-note strong{color:#4d3510}

@@ -54,3 +54,6 @@ footer{text-align:center;padding:10px 20px calc(26px + env(safe-area-inset-botto
 .person-card.pending{opacity:.72;background:#f6f2eb}
 .pending-pill{font-size:10px;font-weight:900;background:#ece5da;color:#7c756b;border-radius:999px;padding:4px 7px}
 @media (min-width:620px){.attendee-groups{grid-template-columns:1fr 1fr}.pair-summary-people{grid-template-columns:1fr 1fr}.attendee-pair.single .pair-buttons{grid-template-columns:1fr}}
+
+/* V0.3 - limites de seleccion */
+.dish.blocked{opacity:.48;background:#f4f1eb;border-style:dashed}.dish.blocked .select-dot{background:#eee8df;border-color:#d7cfc2}.lock-badge{font-size:10px;background:#eee7dc;color:#71685e;padding:3px 7px;border-radius:999px;font-weight:800}.locked-copy{color:#8b5b29;font-weight:800;background:#fff4df;border:1px solid #efd1a2;padding:9px 11px;border-radius:12px}

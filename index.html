@@ -59,7 +59,7 @@
             </div>
             <div class="counter" id="shareCount">0</div>
           </div>
-          <p class="muted">Marca todos los entrantes que te apetezcan. Veremos cuántas personas quieren cada uno.</p>
+          <p class="muted"><strong>Elige solo 1.</strong> Es tu voto para el entrante que más te apetece compartir.</p>
           <div id="shareList" class="dish-list"></div>
         </section>
 
@@ -67,10 +67,10 @@
           <div class="section-head">
             <div>
               <div class="eyebrow">PRIMER PLATO</div>
-              <h2>Elige uno (o ninguno)</h2>
+              <h2>Primero o principal</h2>
             </div>
           </div>
-          <p class="muted">Especialidades, verduras y sopas de la carta.</p>
+          <p id="firstHelp" class="muted">Elige un primero solo si NO vas a elegir principal. Puedes dejarlo sin seleccionar.</p>
           <div id="firstList" class="dish-list"></div>
         </section>
 
@@ -78,9 +78,10 @@
           <div class="section-head">
             <div>
               <div class="eyebrow">PLATO PRINCIPAL</div>
-              <h2>Carne o pescado</h2>
+              <h2>Principal o primero</h2>
             </div>
           </div>
+          <p id="mainHelp" class="muted">Elige un principal solo si NO has elegido primero. Carne o pescado.</p>
           <div id="mainList" class="dish-list"></div>
         </section>
 
@@ -91,6 +92,7 @@
               <h2>Elige uno (o ninguno)</h2>
             </div>
           </div>
+          <p class="muted"><strong>Elige solo 1 postre.</strong> Si cambias de idea, toca otro y sustituirá al anterior.</p>
           <div id="dessertList" class="dish-list"></div>
         </section>
 
@@ -105,7 +107,7 @@
 
           <div class="stats-grid">
             <div class="stat"><span>Han respondido</span><strong id="participantsStat">0/13</strong></div>
-            <div class="stat"><span>Han elegido principal</span><strong id="mainStat">0</strong></div>
+            <div class="stat"><span>Han elegido plato</span><strong id="mainStat">0</strong></div>
             <div class="stat"><span>Total individual*</span><strong id="individualTotalStat">0 €</strong></div>
           </div>
           <p class="tiny">* Suma primeros + principales + postres. Los entrantes compartidos se muestran aparte.</p>

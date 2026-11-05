@@ -31,13 +31,24 @@ const ATTENDEES = attendeePairs.flatMap(group => group.people);
 const TOTAL_ATTENDEES = ATTENDEES.length;
 
 const state = { name:'', choices:{share:[],first:null,main:null,dessert:null}, people:[] };
+
+function isRealFirst(value){ return Boolean(value && value !== 'Sin primero'); }
+function isRealMain(value){ return Boolean(value && value !== 'Sin principal'); }
+function normalizePerson(p){
+  if(!p) return p;
+  const share = Array.isArray(p.share) ? p.share.filter(Boolean).slice(0,1) : [];
+  let first = p.first ?? null;
+  let main = p.main ?? null;
+  if(isRealFirst(first) && isRealMain(main)) main = null;
+  return {...p, share, first, main, dessert:p.dessert ?? null};
+}
 const $ = s => document.querySelector(s);
 const fmt = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(n||0);
 const priceOf = (cat,name) => (menu[cat].find(x=>x[0]===name)||[null,0])[1];
 
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),1400)}
 function localKey(){return `neru:${EVENT_ID}:people`}
-function loadLocal(){try{return JSON.parse(localStorage.getItem(localKey())||'[]')}catch{return []}}
+function loadLocal(){try{return JSON.parse(localStorage.getItem(localKey())||'[]').map(normalizePerson)}catch{return []}}
 function saveLocal(people){localStorage.setItem(localKey(),JSON.stringify(people))}
 function personByName(name){return state.people.find(p=>p.name.toLowerCase()===name.toLowerCase()) || null}
 function hasResponded(p){return Boolean(p && ((p.share||[]).length || p.first !== null || p.main !== null || p.dessert !== null))}
@@ -46,12 +57,13 @@ async function loadPeople(){
   if(!HAS_SUPABASE){state.people=loadLocal();return state.people}
   const {data,error}=await sb.from('neru_choices').select('*').eq('event_id',EVENT_ID).order('name');
   if(error){console.error(error);toast('No se pudo actualizar');return state.people}
-  state.people=(data||[]).map(r=>({name:r.name,share:r.share||[],first:r.first_choice||null,main:r.main_choice||null,dessert:r.dessert_choice||null,updated_at:r.updated_at}));
+  state.people=(data||[]).map(r=>normalizePerson({name:r.name,share:r.share||[],first:r.first_choice||null,main:r.main_choice||null,dessert:r.dessert_choice||null,updated_at:r.updated_at}));
   return state.people;
 }
 
 async function saveCurrent(){
-  const person={name:state.name,share:state.choices.share,first:state.choices.first,main:state.choices.main,dessert:state.choices.dessert,updated_at:new Date().toISOString()};
+  const person=normalizePerson({name:state.name,share:state.choices.share,first:state.choices.first,main:state.choices.main,dessert:state.choices.dessert,updated_at:new Date().toISOString()});
+  state.choices={share:[...(person.share||[])],first:person.first,main:person.main,dessert:person.dessert};
   if(!HAS_SUPABASE){
     const people=loadLocal(); const ix=people.findIndex(p=>p.name.toLowerCase()===state.name.toLowerCase());
     if(ix>=0) people[ix]=person; else people.push(person); saveLocal(people); state.people=people;
@@ -67,7 +79,7 @@ async function saveCurrent(){
 function enterAs(name){
   if(!ATTENDEES.includes(name)) return;
   state.name=name; localStorage.setItem(`neru:${EVENT_ID}:name`,state.name);
-  const existing=personByName(state.name);
+  const existing=normalizePerson(personByName(state.name));
   state.choices=existing?{share:[...(existing.share||[])],first:existing.first||null,main:existing.main||null,dessert:existing.dessert||null}:{share:[],first:null,main:null,dessert:null};
   $('#currentUserName').textContent=state.name; $('#loginView').classList.add('hidden'); $('#menuView').classList.remove('hidden'); renderAll();
 }
@@ -94,16 +106,37 @@ function renderAttendeeSelector(){
 function dishCard(cat,name,price){
   const selected=cat==='share'?state.choices.share.includes(name):state.choices[cat]===name;
   const votes=cat==='share'?state.people.filter(p=>(p.share||[]).includes(name)).length:null;
-  return `<button class="dish ${selected?'selected':''}" data-cat="${cat}" data-name="${encodeURIComponent(name)}">
-    <div class="dish-main"><div class="dish-name">${name}</div><div class="dish-meta"><span class="price">${fmt(price)}</span>${cat==='share'?`<span class="votes">${votes} ${votes===1?'voto':'votos'}</span>`:''}</div></div>
+  const blocked=(cat==='first' && isRealMain(state.choices.main)) || (cat==='main' && isRealFirst(state.choices.first));
+  return `<button class="dish ${selected?'selected':''} ${blocked?'blocked':''}" data-cat="${cat}" data-name="${encodeURIComponent(name)}" aria-disabled="${blocked?'true':'false'}">
+    <div class="dish-main"><div class="dish-name">${name}</div><div class="dish-meta"><span class="price">${fmt(price)}</span>${cat==='share'?`<span class="votes">${votes} ${votes===1?'voto':'votos'}</span>`:''}${blocked?'<span class="lock-badge">🔒 Bloqueado</span>':''}</div></div>
     <div class="select-dot">${selected?'✓':''}</div></button>`;
 }
 function renderLists(){
   for(const cat of ['share','first','main','dessert']) $('#'+cat+'List').innerHTML=menu[cat].map(d=>dishCard(cat,d[0],d[1])).join('');
-  $('#shareCount').textContent=state.choices.share.length;
+  $('#shareCount').textContent=`${state.choices.share.length}/1`;
+
+  const firstBlocked=isRealMain(state.choices.main);
+  const mainBlocked=isRealFirst(state.choices.first);
+  const firstHelp=$('#firstHelp');
+  const mainHelp=$('#mainHelp');
+  if(firstHelp){
+    firstHelp.textContent=firstBlocked?`🔒 Ya has elegido “${state.choices.main}” como principal. Desmárcalo para poder elegir un primero.`:'Elige un primero solo si NO vas a elegir principal. Puedes dejarlo sin seleccionar.';
+    firstHelp.classList.toggle('locked-copy',firstBlocked);
+  }
+  if(mainHelp){
+    mainHelp.textContent=mainBlocked?`🔒 Ya has elegido “${state.choices.first}” como primero. Desmárcalo para poder elegir un principal.`:'Elige un principal solo si NO has elegido primero. Carne o pescado.';
+    mainHelp.classList.toggle('locked-copy',mainBlocked);
+  }
+
   document.querySelectorAll('.dish').forEach(btn=>btn.onclick=async()=>{
     const cat=btn.dataset.cat, name=decodeURIComponent(btn.dataset.name);
-    if(cat==='share') state.choices.share=state.choices.share.includes(name)?state.choices.share.filter(x=>x!==name):[...state.choices.share,name];
+    if(cat==='first' && isRealMain(state.choices.main)){
+      toast(`Ya has elegido principal: ${state.choices.main}`); return;
+    }
+    if(cat==='main' && isRealFirst(state.choices.first)){
+      toast(`Ya has elegido primero: ${state.choices.first}`); return;
+    }
+    if(cat==='share') state.choices.share=state.choices.share.includes(name)?[]:[name];
     else state.choices[cat]=state.choices[cat]===name?null:name;
     await saveCurrent(); toast('Guardado');
   });
@@ -135,7 +168,7 @@ function renderSummary(){
   const responded=ATTENDEES.filter(name=>hasResponded(personByName(name))).length;
   const knownPeople=ATTENDEES.map(personByName).filter(Boolean);
   $('#participantsStat').textContent=`${responded}/${TOTAL_ATTENDEES}`;
-  $('#mainStat').textContent=knownPeople.filter(p=>p.main && p.main!=='Sin principal').length;
+  $('#mainStat').textContent=knownPeople.filter(p=>isRealFirst(p.first) || isRealMain(p.main)).length;
   $('#individualTotalStat').textContent=fmt(knownPeople.reduce((s,p)=>s+personTotal(p),0));
   $('#shareSummary').innerHTML=summaryRows('share',true); $('#firstSummary').innerHTML=summaryRows('first'); $('#mainSummary').innerHTML=summaryRows('main'); $('#dessertSummary').innerHTML=summaryRows('dessert');
   $('#peopleSummary').innerHTML=attendeePairs.map(group=>`<div class="pair-summary"><div class="pair-summary-title">${group.label}</div><div class="pair-summary-people">${group.people.map(personCard).join('')}</div></div>`).join('');

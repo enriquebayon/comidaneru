@@ -30,9 +30,11 @@ const attendeePairs = [
 const ATTENDEES = attendeePairs.flatMap(group => group.people);
 const TOTAL_ATTENDEES = ATTENDEES.length;
 const SERVICE_PER_PERSON = 3.5;
+const SERVICE_EXCLUDED_KEY = `neru:${EVENT_ID}:excludeService`;
 
-const state = { name:'', choices:{share:[],first:null,main:null,dessert:null}, people:[] };
+const state = { name:'', choices:{share:[],first:null,main:null,dessert:null}, people:[], excludeService:false };
 
+function serviceExcluded(){ return Boolean(state.excludeService); }
 function isRealFirst(value){ return Boolean(value && value !== 'Sin primero'); }
 function isRealMain(value){ return Boolean(value && value !== 'Sin principal'); }
 function isFabada(value){ return value === 'Fabada Asturiana'; }
@@ -57,11 +59,32 @@ function personByName(name){return state.people.find(p=>p.name.toLowerCase()===n
 function hasResponded(p){return Boolean(p && ((p.share||[]).length || p.first !== null || p.main !== null || p.dessert !== null))}
 
 async function loadPeople(){
-  if(!HAS_SUPABASE){state.people=loadLocal();return state.people}
+  if(!HAS_SUPABASE){
+    state.people=loadLocal();
+    state.excludeService=localStorage.getItem(SERVICE_EXCLUDED_KEY)==='1';
+    return state.people;
+  }
   const {data,error}=await sb.from('neru_choices').select('*').eq('event_id',EVENT_ID).order('name');
   if(error){console.error(error);toast('No se pudo actualizar');return state.people}
-  state.people=(data||[]).map(r=>normalizePerson({name:r.name,share:r.share||[],first:r.first_choice||null,main:r.main_choice||null,dessert:r.dessert_choice||null,updated_at:r.updated_at}));
+  const rows=data||[];
+  const settings=rows.find(r=>r.name==='__settings__');
+  state.excludeService=Boolean(settings && settings.first_choice==='exclude_service');
+  state.people=rows.filter(r=>r.name!=='__settings__').map(r=>normalizePerson({name:r.name,share:r.share||[],first:r.first_choice||null,main:r.main_choice||null,dessert:r.dessert_choice||null,updated_at:r.updated_at}));
   return state.people;
+}
+
+async function setServiceExcluded(excluded){
+  state.excludeService=Boolean(excluded);
+  if(!HAS_SUPABASE){
+    localStorage.setItem(SERVICE_EXCLUDED_KEY,excluded?'1':'0');
+    renderSummary();
+    return;
+  }
+  const payload={event_id:EVENT_ID,name:'__settings__',share:[],first_choice:excluded?'exclude_service':null,main_choice:null,dessert_choice:null,updated_at:new Date().toISOString()};
+  const {error}=await sb.from('neru_choices').upsert(payload,{onConflict:'event_id,name'});
+  if(error){console.error(error);toast('No se pudo guardar el ajuste');return}
+  await loadPeople();
+  renderSummary();
 }
 
 async function saveCurrent(){
@@ -183,7 +206,7 @@ function foodTotal(p){
 }
 function personTotal(p){
   if(!p) return 0;
-  return foodTotal(p) + (hasResponded(p) ? SERVICE_PER_PERSON : 0);
+  return foodTotal(p) + (hasResponded(p) && !serviceExcluded() ? SERVICE_PER_PERSON : 0);
 }
 function groupTotal(){
   const people=ATTENDEES.map(personByName).filter(Boolean);
@@ -192,7 +215,7 @@ function groupTotal(){
 function personCard(name){
   const p=personByName(name);
   if(!hasResponded(p)) return `<div class="person-card pending"><div class="person-top"><span class="person-name">${name}</span><span class="pending-pill">Pendiente</span></div><div class="person-lines">Aún no ha hecho su selección.</div></div>`;
-  return `<div class="person-card"><div class="person-top"><span class="person-name">${name}</span><span class="person-total">${fmt(personTotal(p))}</span></div><div class="person-lines">🥘 ${(p.share||[]).length?(p.share||[]).join(' · '):'—'}<br>🍲 ${p.first||'—'}<br>🥩 ${p.main||'—'}<br>🍰 ${p.dessert||'—'}<br>🥖 Pan / servicio · ${fmt(SERVICE_PER_PERSON)}</div></div>`;
+  return `<div class="person-card"><div class="person-top"><span class="person-name">${name}</span><span class="person-total">${fmt(personTotal(p))}</span></div><div class="person-lines">🥘 ${(p.share||[]).length?(p.share||[]).join(' · '):'—'}<br>🍲 ${p.first||'—'}<br>🥩 ${p.main||'—'}<br>🍰 ${p.dessert||'—'}<br>🥖 Pan / servicio · ${fmt(SERVICE_PER_PERSON)} ${serviceExcluded()?'(no incluido)':'(incluido)'}</div></div>`;
 }
 function renderSummary(){
   const responded=ATTENDEES.filter(name=>hasResponded(personByName(name))).length;
@@ -203,8 +226,11 @@ function renderSummary(){
   $('#mainStat').textContent=knownPeople.filter(p=>isRealFirst(p.first) || isRealMain(p.main)).length;
   $('#groupTotalStat').textContent=fmt(total);
   $('#averageStat').textContent=fmt(average);
+  const excluded=serviceExcluded();
   const serviceTotal=responded*SERVICE_PER_PERSON;
-  $('#serviceSummary').innerHTML=responded ? `<div class="summary-row"><div><strong>Pan / servicio</strong><small>${responded} ${responded===1?'persona':'personas'} × ${fmt(SERVICE_PER_PERSON)}</small></div><div class="right"><strong>${fmt(serviceTotal)}</strong><small>incluido en TOTAL</small></div></div>` : '<div class="empty">Se añadirá cuando alguien haya respondido.</div>';
+  const toggle=$('#excludeServiceCheckbox');
+  if(toggle) toggle.checked=excluded;
+  $('#serviceSummary').innerHTML=responded ? `<div class="summary-row ${excluded?'service-excluded':''}"><div><strong>Pan / servicio</strong><small>${responded} ${responded===1?'persona':'personas'} × ${fmt(SERVICE_PER_PERSON)}</small></div><div class="right"><strong>${fmt(serviceTotal)}</strong><small>${excluded?'NO incluido en TOTAL':'incluido en TOTAL'}</small></div></div>` : '<div class="empty">Se añadirá cuando alguien haya respondido.</div>';
   $('#shareSummary').innerHTML=summaryRows('share',true); $('#firstSummary').innerHTML=summaryRows('first'); $('#mainSummary').innerHTML=summaryRows('main'); $('#dessertSummary').innerHTML=summaryRows('dessert');
   $('#peopleSummary').innerHTML=attendeePairs.map(group=>`<div class="pair-summary"><div class="pair-summary-title">${group.label}</div><div class="pair-summary-people">${group.people.map(personCard).join('')}</div></div>`).join('');
 }
@@ -218,6 +244,7 @@ function setTab(tab){
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 $('#changeUserBtn').addEventListener('click',async()=>{await loadPeople();$('#menuView').classList.add('hidden');$('#loginView').classList.remove('hidden');state.name='';state.choices={share:[],first:null,main:null,dessert:null};renderAll();window.scrollTo({top:0,behavior:'smooth'})});
 $('#refreshBtn').addEventListener('click',async()=>{await loadPeople();renderAll();toast('Resumen actualizado')});
+$('#excludeServiceCheckbox').addEventListener('change',async e=>{await setServiceExcluded(e.target.checked);toast(e.target.checked?'Pan/servicio fuera del resumen para todos':'Pan/servicio incluido en el resumen para todos')});
 $('#modePill').textContent=HAS_SUPABASE?'🟢 Compartido en tiempo real':'🟡 Modo demo local';
 
 (async function init(){

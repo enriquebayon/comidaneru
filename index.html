@@ -113,10 +113,17 @@
             <div class="stat stat-total"><span>TOTAL*</span><strong id="groupTotalStat">0 €</strong></div>
             <div class="stat stat-average"><span>MEDIA / persona*</span><strong id="averageStat">0 €</strong></div>
           </div>
-          <p class="tiny">* TOTAL suma todo lo elegido hasta ahora a precio completo: 1 entrante por persona + primero o principal + postre + 3,50 € de pan/servicio por cada persona que haya respondido. Si alguien elige Fabada + principal, se suman ambos. MEDIA = TOTAL ÷ número de personas que ya han respondido. No incluye bebida ni café. Los entrantes finales los ajustaréis después (por ejemplo, pedir 10 aunque hayan votado 13).</p>
+          <p class="tiny">* TOTAL suma todo lo elegido hasta ahora a precio completo: 1 entrante por persona + primero o principal + postre. El pan/servicio de 3,50 € por persona se suma solo si no está marcado como “No incluir”. Si alguien elige Fabada + principal, se suman ambos. MEDIA = TOTAL ÷ número de personas que ya han respondido. No incluye bebida ni café. Los entrantes finales los ajustaréis después (por ejemplo, pedir 10 aunque hayan votado 13).</p>
 
           <div class="summary-block">
             <h3>🥖 Pan / servicio</h3>
+            <label class="summary-toggle" for="excludeServiceCheckbox">
+              <input id="excludeServiceCheckbox" type="checkbox" />
+              <span>
+                <strong>No incluir pan/servicio en TOTAL y MEDIA</strong>
+                <small>Úsalo si finalmente el restaurante no cobra los 3,50 € por persona.</small>
+              </span>
+            </label>
             <div id="serviceSummary"></div>
           </div>
 

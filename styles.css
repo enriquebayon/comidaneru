@@ -62,3 +62,13 @@ footer{text-align:center;padding:10px 20px calc(26px + env(safe-area-inset-botto
 @media(max-width:640px){.stats-grid{grid-template-columns:repeat(2,1fr)}.stat strong{font-size:19px}}
 
 .fabada-note{margin:0 0 10px;padding:11px 12px;border-radius:14px;background:#fff5dc;border:1px solid #efd29a;color:#654515;font-size:13px;line-height:1.35}.fabada-note strong{color:#4d3510}
+
+
+/* V0.3.6 - pan/servicio opcional en resumen */
+.summary-toggle{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;margin:0 0 10px;border:1px solid #e3d8c9;background:#fbf7f0;border-radius:14px;cursor:pointer}
+.summary-toggle input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--green);flex:0 0 auto}
+.summary-toggle span{display:block;min-width:0}
+.summary-toggle strong{display:block;font-size:13px;line-height:1.25;color:var(--ink)}
+.summary-toggle small{display:block;margin-top:3px;font-size:11px;line-height:1.35;color:var(--muted)}
+.summary-row.service-excluded{opacity:.58;text-decoration:none}
+.summary-row.service-excluded .right small{color:#9a5d3a;font-weight:800}

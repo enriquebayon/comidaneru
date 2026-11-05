@@ -151,14 +151,23 @@ function tally(cat){
   }
   return [...m.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]));
 }
-function summaryRows(cat,withRations=false){
+function summaryRows(cat,showVoteTotal=false){
   const rows=tally(cat).filter(([n])=>!n.startsWith('Sin ')); if(!rows.length)return '<div class="empty">Todavía no hay elecciones.</div>';
   return rows.map(([name,count])=>{
-    const price=priceOf(cat,name); const recommendation=withRations?Math.max(1,Math.ceil(count/4)):null;
-    return `<div class="summary-row"><div><strong>${name}</strong>${withRations?`<small>Orientativo: ${recommendation} ${recommendation===1?'ración':'raciones'} si queréis compartir entre ~4</small>`:''}</div><div class="right">${count} ${count===1?'persona':'personas'}<small>${fmt(price)}</small></div></div>`
+    const price=priceOf(cat,name);
+    const voteTotal=count*price;
+    return `<div class="summary-row"><div><strong>${name}</strong>${showVoteTotal?`<small>${count} ${count===1?'voto':'votos'} × ${fmt(price)} = ${fmt(voteTotal)}</small>`:''}</div><div class="right">${count} ${count===1?'persona':'personas'}<small>${showVoteTotal?fmt(voteTotal):fmt(price)}</small></div></div>`
   }).join('');
 }
-function personTotal(p){return p?priceOf('first',p.first)+priceOf('main',p.main)+priceOf('dessert',p.dessert):0}
+function personTotal(p){
+  if(!p) return 0;
+  const shareName=(p.share||[])[0] || null;
+  return priceOf('share',shareName)+priceOf('first',p.first)+priceOf('main',p.main)+priceOf('dessert',p.dessert);
+}
+function groupTotal(){
+  const people=ATTENDEES.map(personByName).filter(Boolean);
+  return people.reduce((sum,p)=>sum+personTotal(p),0);
+}
 function personCard(name){
   const p=personByName(name);
   if(!hasResponded(p)) return `<div class="person-card pending"><div class="person-top"><span class="person-name">${name}</span><span class="pending-pill">Pendiente</span></div><div class="person-lines">Aún no ha hecho su selección.</div></div>`;
@@ -167,9 +176,12 @@ function personCard(name){
 function renderSummary(){
   const responded=ATTENDEES.filter(name=>hasResponded(personByName(name))).length;
   const knownPeople=ATTENDEES.map(personByName).filter(Boolean);
+  const total=groupTotal();
+  const average=responded>0?total/responded:0;
   $('#participantsStat').textContent=`${responded}/${TOTAL_ATTENDEES}`;
   $('#mainStat').textContent=knownPeople.filter(p=>isRealFirst(p.first) || isRealMain(p.main)).length;
-  $('#individualTotalStat').textContent=fmt(knownPeople.reduce((s,p)=>s+personTotal(p),0));
+  $('#groupTotalStat').textContent=fmt(total);
+  $('#averageStat').textContent=fmt(average);
   $('#shareSummary').innerHTML=summaryRows('share',true); $('#firstSummary').innerHTML=summaryRows('first'); $('#mainSummary').innerHTML=summaryRows('main'); $('#dessertSummary').innerHTML=summaryRows('dessert');
   $('#peopleSummary').innerHTML=attendeePairs.map(group=>`<div class="pair-summary"><div class="pair-summary-title">${group.label}</div><div class="pair-summary-people">${group.people.map(personCard).join('')}</div></div>`).join('');
 }

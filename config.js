@@ -3,6 +3,6 @@
 // que te indicaré en el paso a paso del README.
 window.NERU_CONFIG = {
   eventId: 'neru-2026-11-07',
-  supabaseUrl: '',
-  supabaseAnonKey: ''
+  supabaseUrl: 'https://wmulcuqjhlfrojypriof.supabase.co',
+  supabaseAnonKey: 'sb_publishable_yXrTMAz7Xrv5QCA5AaPloQ_OrEcY2ij'
 };
